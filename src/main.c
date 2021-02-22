@@ -36,9 +36,7 @@ int main (void)
     /*************
      * Queue & Data Structure Setup
      *************/
-
-    initRBQueue(&rx_message_q, (uint8_t*)rx_array, 10, sizeof(BLMessage_rx_t));
-
+    bootloaderInit();
 
     /*************
      * Enable IRQ lines
@@ -52,26 +50,7 @@ int main (void)
      * Main program loop
      *************/
 
-    // Basic super loop for handling messages from an interrupt function.
-    // Example of toggling an LED for a "METADATA" message
-    BLMessage_rx_t rx_message;
-    while(1)
-    {
-        while(isRBQueueEmpty(&rx_message_q))
-            asm("WFE");
-
-        rbDequeue(&rx_message_q, &rx_message);
-
-        switch(rx_message.type)
-        {
-            case(METADATA):
-                GPIOB->ODR = GPIOB->ODR ^ GPIO_ODR_OD3;
-                break;
-
-            default:
-                break;
-        }
-    }
+    bootloaderMain();
 
 }
 
@@ -83,7 +62,7 @@ void EXTI0_IRQHandler () {
     EXTI->PR1 |= EXTI_PR1_PIF0;
 
     BLMessage_rx_t new_message = {
-        .type = METADATA,
+        .type = M_NONE,
         .data = {0}
     };
 
