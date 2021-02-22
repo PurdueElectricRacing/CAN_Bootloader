@@ -14,7 +14,7 @@ typedef enum {
 
 typedef struct {
     BLMessageType_e type;
-    uint8_t data[64];
+    uint8_t data[8];
 } BLMessage_rx_t;
 
 typedef enum {
