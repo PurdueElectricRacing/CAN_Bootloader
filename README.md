@@ -1,6 +1,8 @@
 # CAN Bootloader for STM32L4 Devices
 This bootloader will use a connected CAN bus to flash new application firmware to the device.This project was built on top to the PlatformIO project in order to simplify the build system and CMSIS dependency.
 
+## Useful Links
+- [STM32L43xx Reference Manual](https://www.st.com/resource/en/reference_manual/dm00151940-stm32l41xxx-42xxx-43xxx-44xxx-45xxx-46xxx-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf) for Peripheral Info
 ---
 ## Getting Started
 

@@ -1,3 +1,13 @@
+/**
+ * @file rb_queue.c
+ * @author Adam Busch (busch8@purdue.edu)
+ * @brief Queue implemented with a ring buffer and type-wrappers for generic datatypes.
+ * @version 0.1
+ * @date 2021-02-21
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
 
 #include <rb_queue.h>
 #include <stddef.h>
