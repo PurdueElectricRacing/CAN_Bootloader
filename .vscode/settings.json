@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "type_traits": "cpp",
-        "rb_queue.h": "c",
-        "stm32l432xx.h": "c",
-        "bootloader.h": "c"
-    }
-}
