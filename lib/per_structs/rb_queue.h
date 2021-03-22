@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /**
  * @brief  Define the underlying data storage element. 32 bit is chosen to match MCU archetecture
@@ -34,6 +35,8 @@ typedef struct {
     uint32_t _head;             ///< Index of first item in queue    
     uint32_t _tail;             ///< Index of last item in queue
 } rb_queue_t;
+
+void queue_memcpy(void *dest, void *src, size_t n);
 
 void initRBQueue(rb_queue_t* q, uint8_t* elements, uint32_t capacity, uint32_t element_size);
 bool isRBQueueEmpty(rb_queue_t* q);

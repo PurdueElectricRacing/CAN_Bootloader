@@ -1,8 +1,19 @@
-
+#ifdef STM32L4
 #include "stm32l432xx.h"
+#endif
+
+#include "stm32f429xx.h"
+#include "hal_can_f4.h"
+
 
 #include <rb_queue.h>
 #include <bootloader.h>
+
+// TODO: Replace with linker script references.
+uint32_t SAVED_CRC;
+uint32_t SAVED_APP_LENGTH;
+uint32_t BOOT_FLAG;
+uint32_t APP_FLASH_START;
 
 int main (void)
 {
@@ -14,57 +25,48 @@ int main (void)
     SCB->VTOR = (uint32_t) (&g_pfnVectors);
 
     /*************
-     * Peripheral Setup
-     *************/
-
-    // Enable syscfg timer and line0 interrupts
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PB;
-
-    // Enable external interrupt on line 0 for rising & falling 
-    EXTI->IMR1 |= EXTI_IMR1_IM0;
-    EXTI->RTSR1 |= EXTI_RTSR1_RT0;
-    EXTI->FTSR1 |= EXTI_FTSR1_FT0;
-
-    // Setup GPIOB
-    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
-    // PB0 input and PB3 output
-    GPIOB->MODER &= ~(GPIO_MODER_MODE0_Msk | GPIO_MODER_MODE3_Msk);
-    GPIOB->MODER |= (0x01UL << GPIO_MODER_MODE3_Pos);
-
-
-    /*************
      * Queue & Data Structure Setup
      *************/
     bootloaderInit();
 
     /*************
+     * Peripheral Setup
+     *************/
+    initCAN1();
+
+    /*************
      * Enable IRQ lines
      *************/
 
-    // Enable EXTI interrupt for line 0
-    NVIC_EnableIRQ(EXTI0_IRQn);
-
+    // CAN1 Interrupts
+    NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
     /*************
      * Main program loop
      *************/
-
     bootloaderMain();
+
+    /*************
+     * Peripheral Teardown
+     *************/
+    deinitCAN1();
+    NVIC_DisableIRQ(CAN1_RX0_IRQn);
 
 }
 
-/**
- * @brief Dummy IRQ for faking CAN messages. Will follow a sequence of messages defined somewhere...
- * 
- */
-void EXTI0_IRQHandler () {
-    EXTI->PR1 |= EXTI_PR1_PIF0;
+CanMsgTypeDef can_rx_msg;
+extern rb_queue_t rx_message_q;
+void CAN1_RX0_IRQHandler() 
+{
+    // Copy CAN frame into message buffer
+    *(&can_rx_msg.Data[0]) = (CAN1->sFIFOMailBox[0].RDLR);
+    *(&can_rx_msg.Data[4]) = (CAN1->sFIFOMailBox[0].RDHR);
 
-    BLMessage_rx_t new_message = {
-        .type = M_NONE,
-        .data = {0}
-    };
-
-    rbEnqueue(&rx_message_q, &new_message);
+    if (rbEnqueue(&rx_message_q, &can_rx_msg))
+    {
+        CAN1->RF0R |= (CAN_RF0R_RFOM0); // Release this mailbox
+        NVIC_ClearPendingIRQ(CAN1_RX0_IRQn);
+    } else {
+        // We filled up our message queue! Do something about it
+    }    
 }

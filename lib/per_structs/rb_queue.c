@@ -10,7 +10,7 @@
  */
 
 #include <rb_queue.h>
-#include <stddef.h>
+
 
 /**
  * @brief Simple memcpy implementation. I dont want to include stdlib
@@ -19,7 +19,7 @@
  * @param src Memoy copy source
  * @param n Number of btes to copy
  */
-static void queue_memcpy(void *dest, void *src, size_t n)
+void queue_memcpy(void *dest, void *src, size_t n)
 {
     for(int i = 0; i < n; i++)
         ((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
