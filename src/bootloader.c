@@ -10,6 +10,15 @@
  */
 #include <bootloader.h>
 
+
+// Persistant Values
+#define SHARED_FLASH __attribute__((section(".shared_flash")));
+volatile uint32_t MAGIC_WORD        SHARED_FLASH;
+volatile uint32_t SAVED_CRC         SHARED_FLASH;
+volatile uint32_t SAVED_APP_LENGTH  SHARED_FLASH;
+volatile uint32_t BOOT_FLAG         SHARED_FLASH;
+volatile uint32_t APP_FLASH_START   SHARED_FLASH;
+
 static BLState_e setBootFlags(BLMessageData_t* msg);
 static BLState_e checkBootFlags(BLMessageData_t* msg);
 static BLState_e processMetadata(BLMessageData_t* msg);
@@ -18,7 +27,7 @@ static BLState_e flashApp(BLMessageData_t* msg);
 static BLState_e validateFlash(BLMessageData_t* msg);
 static BLState_e launchApp(BLMessageData_t* msg);
 
-bool decodeCANMsg(CanMsgTypeDef* canMessage, BLMessageData_t* fsmMessage);
+static bool decodeCANMsg(CanMsgTypeDef* canMessage, BLMessageData_t* fsmMessage);
 
 static FSMTableEntry_t transition_table[] = 
 {
@@ -96,6 +105,12 @@ void bootloaderInit()
     tempApplicationCRC = 0;
     tempApplicationLength = 0;
     flashedApplicationIndex = 0;
+
+    if(MAGIC_WORD != 0xDEADBEEF)
+    {
+        flashWriteU32((uint32_t) &BOOT_FLAG,  0xFA);
+    }
+        
 }
 
 /**
@@ -106,7 +121,7 @@ void bootloaderInit()
  * @return true CAN message translated into a valid Bootloader message
  * @return false otherwise
  */
-bool decodeCANMsg(CanMsgTypeDef* canMessage, BLMessageData_t* fsmMessage)
+static bool decodeCANMsg(CanMsgTypeDef* canMessage, BLMessageData_t* fsmMessage)
 {
     for(int i = 0; i < 8; i++)
         ((uint8_t*)&(fsmMessage->all_data))[i] = ((uint8_t*)canMessage->Data)[i];
@@ -122,9 +137,8 @@ bool decodeCANMsg(CanMsgTypeDef* canMessage, BLMessageData_t* fsmMessage)
  */
 static BLState_e setBootFlags(BLMessageData_t* msg)
 {
-    // TODO: UNLOCK Flash
-    BOOT_FLAG = msg->flag_set.operation_mode_flag;
-    // TODO: LOCK Flash
+    // BOOT_FLAG = msg->flag_set.operation_mode_flag;
+    flashWriteU32((uint32_t) &BOOT_FLAG,  msg->flag_set.operation_mode_flag);
     return checkBootFlags(msg);
 }
 
@@ -160,7 +174,6 @@ static BLState_e processMetadata(BLMessageData_t* msg)
     flashedApplicationEnd   = APP_FLASH_START + tempApplicationLength;
 
     // Metadata for application recieved, begin waiting for application data.
-    // TODO: UNLOCK Flash
     return S_FLASH_APP;
 }
 
@@ -174,20 +187,23 @@ static BLState_e checkFlashedCRC(BLMessageData_t* msg)
 {
     BLState_e nextState = S_RECOVERY;
     
-    if (calculateFlashCRC(APP_FLASH_START, tempApplicationLength) == tempApplicationCRC)
+    if (calculateCRC(APP_FLASH_START, tempApplicationLength) == tempApplicationCRC)
     {
         // Recieved length and CRC passed the check, store new values and reboot
-        // TODO: UNLOCK Flash
-        SAVED_CRC = tempApplicationCRC;
-        SAVED_APP_LENGTH = tempApplicationLength;
-        BOOT_FLAG = FLAG_BOOT_TO_APP;
-        // TODO: LOCK Flash
+        // SAVED_CRC = tempApplicationCRC;
+        // SAVED_APP_LENGTH = tempApplicationLength;
+        // BOOT_FLAG = FLAG_BOOT_TO_APP;
+
+        flashWriteU32((uint32_t) &SAVED_CRC, tempApplicationCRC);
+        flashWriteU32((uint32_t) &SAVED_APP_LENGTH, tempApplicationLength);
+        flashWriteU32((uint32_t) &BOOT_FLAG, FLAG_BOOT_TO_APP);
+
         nextState = S_LAUNCH_APP;
     } else {
         // TODO: Send CRC Error
-        // TODO: UNLOCK Flash
-        BOOT_FLAG = FLAG_FLASH_NEW_APP;
-        // TODO: LOCK Flash
+        // BOOT_FLAG = FLAG_FLASH_NEW_APP;
+        flashWriteU32((uint32_t) &BOOT_FLAG, FLAG_FLASH_NEW_APP);
+
         nextState = S_WAIT_FOR_META;
     }
 
@@ -204,11 +220,11 @@ static BLState_e checkFlashedCRC(BLMessageData_t* msg)
  */
 static BLState_e flashApp(BLMessageData_t* msg)
 {
-    *((uint32_t*)flashedApplicationIndex++) = msg->app_data.app_data;
+    // *((uint32_t*)flashedApplicationIndex++) = msg->app_data.app_data;
+    flashWriteU32((uint32_t) *((uint32_t*)flashedApplicationIndex++), msg->app_data.app_data);
 
     if (flashedApplicationIndex == flashedApplicationEnd)
     {
-        // TODO: LOCK Flash
         return S_CRC_CHECK;
     }
     
@@ -227,15 +243,15 @@ static BLState_e validateFlash(BLMessageData_t* msg)
 {
     BLState_e nextState = S_RECOVERY;
     
-    if (calculateFlashCRC(APP_FLASH_START, SAVED_APP_LENGTH) == SAVED_CRC)
+    if (calculateCRC(APP_FLASH_START, SAVED_APP_LENGTH) == SAVED_CRC)
     {
         // We have verified the integrety of the current flash. Go ahead and launch the application
         nextState = S_LAUNCH_APP;
     } else {
         // TODO: Send CRC Error
-        // TODO: UNLOCK Flash
-        BOOT_FLAG = FLAG_FLASH_NEW_APP;
-        // TODO: LOCK Flash
+        // BOOT_FLAG = FLAG_FLASH_NEW_APP;
+        flashWriteU32((uint32_t) &BOOT_FLAG, FLAG_FLASH_NEW_APP);
+
         nextState = S_WAIT_FOR_META;
     }
 

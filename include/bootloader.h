@@ -3,8 +3,9 @@
 
 #include <rb_queue.h>
 #include <stdint.h>
-#include <hal_can_f4.h>
-#include <hal_crc.h>
+#include <per_hal/hal_can.h>
+#include <per_hal/hal_crc.h>
+#include <per_hal/hal_flash.h>
 
 /*
 *   Value Table Struct Definitions
@@ -81,15 +82,9 @@ void bootloaderMain();
 rb_queue_t rx_message_q;
 CanMsgTypeDef rx_array [10];
 
-// Ring buffer queue for CAN rxMessages
+// Ring buffer queue for CAN txMessages
 rb_queue_t tx_message_q;
 CanMsgTypeDef tx_array [10];
-
-// Persistant Values
-extern uint32_t SAVED_CRC;
-extern uint32_t SAVED_APP_LENGTH;
-extern uint32_t BOOT_FLAG;
-extern uint32_t APP_FLASH_START;
 
 // Flashing New Application Globals
 uint32_t tempApplicationCRC;        // Compare to calculated CRC

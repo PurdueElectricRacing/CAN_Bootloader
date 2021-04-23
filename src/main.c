@@ -3,17 +3,11 @@
 #endif
 
 #include "stm32f429xx.h"
-#include "hal_can_f4.h"
+#include "per_hal/hal_can.h"
 
 
 #include <rb_queue.h>
 #include <bootloader.h>
-
-// TODO: Replace with linker script references.
-uint32_t SAVED_CRC;
-uint32_t SAVED_APP_LENGTH;
-uint32_t BOOT_FLAG;
-uint32_t APP_FLASH_START;
 
 int main (void)
 {
@@ -54,7 +48,7 @@ int main (void)
 
 }
 
-CanMsgTypeDef can_rx_msg;
+static CanMsgTypeDef can_rx_msg;
 extern rb_queue_t rx_message_q;
 void CAN1_RX0_IRQHandler() 
 {
